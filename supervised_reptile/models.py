@@ -49,3 +49,21 @@ class MiniImageNetModel:
                                                                    logits=self.logits)
         self.predictions = tf.argmax(self.logits, axis=-1)
         self.minimize_op = optimizer(**optim_kwargs).minimize(self.loss)
+
+class ElmoMimlModel:
+    """
+    A model for Mini-ImageNet classification.
+    """
+    def __init__(self, num_classes, optimizer=DEFAULT_OPTIMIZER, **optim_kwargs):
+        dim = 1024
+        self.input_ph = tf.placeholder(tf.float32, shape=(None, dim))
+        out = self.input_ph
+        for _ in range(2):
+            dim /= 2
+            out = tf.layers.dense(out, dim, activation=tf.nn.relu)
+        self.logits = tf.layers.dense(out, num_classes)
+        self.label_ph = tf.placeholder(tf.int32, shape=(None,))
+        self.loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.label_ph,
+                                                                   logits=self.logits)
+        self.predictions = tf.argmax(self.logits, axis=-1)
+        self.minimize_op = optimizer(**optim_kwargs).minimize(self.loss)
