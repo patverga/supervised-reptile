@@ -29,6 +29,7 @@ class OmniglotModel:
         self.predictions = tf.argmax(self.logits, axis=-1)
         self.minimize_op = optimizer(**optim_kwargs).minimize(self.loss)
 
+
 # pylint: disable=R0903
 class MiniImageNetModel:
     """
@@ -50,14 +51,17 @@ class MiniImageNetModel:
         self.predictions = tf.argmax(self.logits, axis=-1)
         self.minimize_op = optimizer(**optim_kwargs).minimize(self.loss)
 
+
 class ElmoMimlModel:
     """
     A model for Mini-ImageNet classification.
     """
     def __init__(self, num_classes, optimizer=DEFAULT_OPTIMIZER, **optim_kwargs):
         dim = 1024
-        self.input_ph = tf.placeholder(tf.float32, shape=(None, dim))
-        out = self.input_ph
+        self.input_ph = tf.placeholder(tf.float32, shape=(None, 3, dim))
+
+        out = self.avg_layers(self.input_ph)
+
         for _ in range(2):
             dim /= 2
             out = tf.layers.dense(out, dim, activation=tf.nn.relu)
@@ -67,3 +71,23 @@ class ElmoMimlModel:
                                                                    logits=self.logits)
         self.predictions = tf.argmax(self.logits, axis=-1)
         self.minimize_op = optimizer(**optim_kwargs).minimize(self.loss)
+
+    def avg_layers(self, layers, n_lm_layers=3):
+        layer_weight = tf.get_variable(
+            'ELMo_W',
+            shape=3,
+            initializer=tf.zeros_initializer,
+            trainable=True,
+        )
+        normed_weights = tf.split(
+            tf.nn.softmax(layer_weight + 1.0 / n_lm_layers), n_lm_layers
+        )
+        # split LM layers
+        layers = tf.split(layers, n_lm_layers, axis=1)
+
+        # compute the weighted, normalized LM activations
+        pieces = []
+        for w, t in zip(normed_weights, layers):
+            pieces.append(w * tf.squeeze(t, squeeze_dims=1))
+        sum_pieces = tf.add_n(pieces)
+        return sum_pieces

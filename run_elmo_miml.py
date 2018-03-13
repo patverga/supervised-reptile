@@ -9,10 +9,11 @@ import tensorflow as tf
 from supervised_reptile.args import argument_parser, model_kwargs, train_kwargs, evaluate_kwargs
 from supervised_reptile.eval import evaluate
 from supervised_reptile.models import ElmoMimlModel
-from supervised_reptile.elmo_miml import read_dataset
+from supervised_reptile.elmo_miml import read_dataset, split_dataset
 from supervised_reptile.train import train
 
 DATA_DIR = 'data/miml'
+
 
 def main():
     """
@@ -21,7 +22,7 @@ def main():
     args = argument_parser().parse_args()
     random.seed(args.seed)
 
-    train_set, val_set, test_set = read_dataset(DATA_DIR)
+    train_set, test_set = split_dataset(read_dataset(DATA_DIR))
     model = ElmoMimlModel(args.classes, **model_kwargs(args))
 
     with tf.Session() as sess:
@@ -35,7 +36,6 @@ def main():
         print('Evaluating...')
         eval_kwargs = evaluate_kwargs(args)
         print('Train accuracy: ' + str(evaluate(sess, model, train_set, **eval_kwargs)))
-        print('Validation accuracy: ' + str(evaluate(sess, model, val_set, **eval_kwargs)))
         print('Test accuracy: ' + str(evaluate(sess, model, test_set, **eval_kwargs)))
 
 if __name__ == '__main__':
